@@ -9,95 +9,823 @@
   <script src="https://unpkg.com/html5-qrcode"></script>
 
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 20px;
+    * {
+      box-sizing: border-box;
     }
 
-    #reader {
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 18px;
+      text-align: center;
+    }
+
+    .box {
       max-width: 500px;
-      margin: 20px auto;
+      margin: 10px auto;
+      background: white;
+      padding: 22px;
+      border-radius: 20px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      margin: 0 0 5px;
+    }
+
+    .subtitle {
+      color: #777;
+      margin-bottom: 20px;
+    }
+
+    input {
+      width: 100%;
+      padding: 15px;
+      font-size: 20px;
+      border: 2px solid #ddd;
+      border-radius: 10px;
+      text-align: center;
     }
 
     button {
-      padding: 15px 25px;
+      width: 100%;
+      margin-top: 12px;
+      padding: 15px;
       font-size: 18px;
       border: none;
       border-radius: 10px;
       background: #ff7a00;
       color: white;
+      cursor: pointer;
     }
 
-    #status {
-      margin: 20px;
-      font-size: 18px;
+    button:disabled {
+      opacity: 0.6;
+    }
+
+    #reader {
+      width: 100%;
+      margin-top: 15px;
+    }
+
+    #scannerArea {
+      display: none;
+    }
+
+    #result {
+      display: none;
+      margin-top: 18px;
+      padding: 20px;
+      border-radius: 15px;
+    }
+
+    .eligible {
+      background: #e2f7e7;
+      color: #146c2e;
+    }
+
+    .used {
+      background: #ffdede;
+      color: #9c0000;
+    }
+
+    .invalid {
+      background: #eeeeee;
+      color: #444;
+    }
+
+    .success {
+      background: #d9f7df;
+      color: #146c2e;
+    }
+
+    .big {
+      font-size: 26px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .employee {
+      font-size: 19px;
+      line-height: 1.6;
+    }
+
+    #message {
+      margin-top: 12px;
+      color: #a00000;
+    }
+
+    #scannerStatus {
+      margin: 12px 0;
+      font-size: 17px;
+    }
+
+    iframe {
+      display: none;
     }
   </style>
 </head>
 
 <body>
 
-  <h2>🍱 Staff Meal Scanner</h2>
+<div class="box">
 
-  <p>ทดสอบกล้องสำหรับสแกน QR</p>
+  <h1>🍱 Staff Meal Scanner</h1>
 
-  <button onclick="startScanner()">
-    📷 เปิดกล้อง
-  </button>
+  <div class="subtitle">
+    ระบบสแกนสิทธิ์รับอาหารพนักงาน
+  </div>
 
-  <div id="status"></div>
 
-  <div id="reader"></div>
+  <!-- LOGIN -->
 
-  <script>
+  <div id="loginArea">
 
-    let scanner;
+    <div style="font-size:22px;font-weight:bold;margin:20px 0 10px;">
+      🔐 Staff Login
+    </div>
 
-    function startScanner() {
+    <div style="margin-bottom:12px;">
+      กรุณาใส่ Staff PIN
+    </div>
 
-      document.getElementById("status").innerHTML =
-        "กำลังเปิดกล้อง...";
+    <input
+      id="staffPin"
+      type="password"
+      inputmode="numeric"
+      placeholder="Staff PIN"
+    >
 
-      scanner = new Html5Qrcode("reader");
+    <button onclick="loginStaff()">
+      เข้าสู่ระบบ
+    </button>
 
-      scanner.start(
-        { facingMode: "environment" },
-        {
-          fps: 10,
-          qrbox: {
-            width: 250,
-            height: 250
-          }
-        },
+    <div id="message"></div>
 
-        function(decodedText) {
+  </div>
 
-          document.getElementById("status").innerHTML =
-            "✅ อ่าน QR ได้แล้ว";
 
-          alert(decodedText);
+  <!-- SCANNER -->
 
-        },
+  <div id="scannerArea">
 
-        function() {
-          // ไม่ต้องแสดงข้อความระหว่างค้นหา QR
-        }
+    <div id="scannerStatus">
+      กดเปิดกล้องเพื่อเริ่มสแกน
+    </div>
 
-      ).then(function() {
+    <button id="cameraButton" onclick="startScanner()">
+      📷 เปิดกล้อง
+    </button>
 
-        document.getElementById("status").innerHTML =
-          "✅ กล้องพร้อมสแกน";
+    <div id="reader"></div>
 
-      }).catch(function(error) {
+    <div id="result"></div>
 
-        document.getElementById("status").innerHTML =
-          "❌ เปิดกล้องไม่ได้: " + error;
+  </div>
 
-      });
+</div>
+
+
+<!-- ใช้ส่ง POST ไป Apps Script -->
+<iframe name="apiFrame" id="apiFrame"></iframe>
+
+<form
+  id="apiForm"
+  method="POST"
+  target="apiFrame"
+  action="https://script.google.com/macros/s/AKfycbzQ5cz48hmVvqn-gyrg7TVBwqm0oguBUJMZd0VEZqaE5k-B8akp4msS14sayxI9w1rg/exec"
+  style="display:none;"
+>
+  <input name="action" id="apiAction">
+  <input name="pin" id="apiPin">
+  <input name="token" id="apiToken">
+  <input name="sessionToken" id="apiSession">
+</form>
+
+
+<script>
+
+const API_ORIGIN = "https://script.google.com";
+
+const SESSION_KEY = "staffMealSessionToken";
+
+let html5QrCode = null;
+let scannerRunning = false;
+let processing = false;
+let currentToken = "";
+let pendingAction = "";
+
+
+/* =========================
+   เปิดหน้า
+========================= */
+
+window.addEventListener("load", function() {
+
+  const savedSession =
+    localStorage.getItem(SESSION_KEY);
+
+  if (savedSession) {
+
+    showScanner();
+
+  } else {
+
+    showLogin();
+
+  }
+
+});
+
+
+/* =========================
+   รับผลจาก Apps Script
+========================= */
+
+window.addEventListener("message", function(event) {
+
+  if (
+    event.origin !== "https://script.google.com" &&
+    event.origin !== "https://script.googleusercontent.com"
+  ) {
+    return;
+  }
+
+  const data = event.data;
+
+  if (!data || typeof data !== "object") {
+    return;
+  }
+
+
+  if (pendingAction === "login") {
+
+    handleLoginResult(data);
+
+  } else if (pendingAction === "check") {
+
+    handleCheckResult(data);
+
+  } else if (pendingAction === "confirm") {
+
+    handleConfirmResult(data);
+
+  }
+
+});
+
+
+/* =========================
+   ส่งข้อมูลไป Apps Script
+========================= */
+
+function sendToApi(action, values) {
+
+  pendingAction = action;
+
+  document.getElementById("apiAction").value =
+    action;
+
+  document.getElementById("apiPin").value =
+    values.pin || "";
+
+  document.getElementById("apiToken").value =
+    values.token || "";
+
+  document.getElementById("apiSession").value =
+    values.sessionToken || "";
+
+  document.getElementById("apiForm").submit();
+}
+
+
+/* =========================
+   LOGIN
+========================= */
+
+function loginStaff() {
+
+  const pin =
+    document.getElementById("staffPin").value.trim();
+
+  const message =
+    document.getElementById("message");
+
+  if (!pin) {
+
+    message.innerHTML =
+      "กรุณาใส่ Staff PIN";
+
+    return;
+  }
+
+  message.innerHTML =
+    "กำลังตรวจสอบ...";
+
+  sendToApi("login", {
+    pin: pin
+  });
+}
+
+
+function handleLoginResult(data) {
+
+  const message =
+    document.getElementById("message");
+
+  if (data.success === true && data.sessionToken) {
+
+    localStorage.setItem(
+      SESSION_KEY,
+      data.sessionToken
+    );
+
+    document.getElementById("staffPin").value = "";
+
+    message.innerHTML = "";
+
+    showScanner();
+
+  } else {
+
+    message.innerHTML =
+      "❌ " + (data.message || "Staff PIN ไม่ถูกต้อง");
+
+    document.getElementById("staffPin").value = "";
+
+  }
+}
+
+
+/* =========================
+   หน้าจอ
+========================= */
+
+function showLogin() {
+
+  stopScanner(function() {
+
+    document.getElementById("loginArea").style.display =
+      "block";
+
+    document.getElementById("scannerArea").style.display =
+      "none";
+
+  });
+}
+
+
+function showScanner() {
+
+  document.getElementById("loginArea").style.display =
+    "none";
+
+  document.getElementById("scannerArea").style.display =
+    "block";
+
+  document.getElementById("result").style.display =
+    "none";
+
+  document.getElementById("cameraButton").style.display =
+    "block";
+
+  document.getElementById("scannerStatus").innerHTML =
+    "พร้อมใช้งาน — กดเปิดกล้องเพื่อเริ่มสแกน";
+}
+
+
+/* =========================
+   เปิดกล้อง
+========================= */
+
+function startScanner() {
+
+  if (scannerRunning) {
+    return;
+  }
+
+  processing = false;
+  currentToken = "";
+
+  document.getElementById("result").style.display =
+    "none";
+
+  document.getElementById("scannerStatus").innerHTML =
+    "กำลังเปิดกล้อง...";
+
+  document.getElementById("cameraButton").style.display =
+    "none";
+
+
+  if (!html5QrCode) {
+
+    html5QrCode =
+      new Html5Qrcode("reader");
+
+  }
+
+
+  html5QrCode.start(
+
+    { facingMode: "environment" },
+
+    {
+      fps: 10,
+
+      qrbox: {
+        width: 250,
+        height: 250
+      }
+    },
+
+    function(decodedText) {
+
+      handleScan(decodedText);
+
+    },
+
+    function() {
+      // ระหว่างค้นหา QR ไม่ต้องแสดง error
     }
 
-  </script>
+  )
+
+  .then(function() {
+
+    scannerRunning = true;
+
+    document.getElementById("scannerStatus").innerHTML =
+      "📷 พร้อมสแกน QR พนักงาน";
+
+  })
+
+  .catch(function(error) {
+
+    scannerRunning = false;
+
+    document.getElementById("cameraButton").style.display =
+      "block";
+
+    document.getElementById("scannerStatus").innerHTML =
+      "❌ เปิดกล้องไม่ได้: " + error;
+
+  });
+}
+
+
+/* =========================
+   อ่าน QR
+========================= */
+
+function handleScan(decodedText) {
+
+  if (processing) {
+    return;
+  }
+
+  processing = true;
+
+  const token =
+    extractToken(decodedText);
+
+  if (!token) {
+
+    processing = false;
+
+    document.getElementById("scannerStatus").innerHTML =
+      "❌ QR ไม่ถูกต้อง";
+
+    return;
+  }
+
+  currentToken = token;
+
+
+  stopScanner(function() {
+
+    document.getElementById("scannerStatus").innerHTML =
+      "กำลังตรวจสอบสิทธิ์...";
+
+    checkEmployee();
+
+  });
+}
+
+
+/* =========================
+   ดึง token จาก QR
+========================= */
+
+function extractToken(text) {
+
+  try {
+
+    const url =
+      new URL(text);
+
+    return url.searchParams.get("token") || "";
+
+  } catch (error) {
+
+    return String(text || "").trim();
+
+  }
+}
+
+
+/* =========================
+   CHECK
+========================= */
+
+function checkEmployee() {
+
+  const sessionToken =
+    localStorage.getItem(SESSION_KEY);
+
+  sendToApi("check", {
+
+    token: currentToken,
+    sessionToken: sessionToken
+
+  });
+}
+
+
+function handleCheckResult(data) {
+
+  if (data.status === "unauthorized") {
+
+    localStorage.removeItem(SESSION_KEY);
+
+    currentToken = "";
+    processing = false;
+
+    showLogin();
+
+    document.getElementById("message").innerHTML =
+      "Session หมดอายุ กรุณาใส่ Staff PIN ใหม่";
+
+    return;
+  }
+
+  showResult(data);
+}
+
+
+/* =========================
+   แสดงผล
+========================= */
+
+function showResult(data) {
+
+  const result =
+    document.getElementById("result");
+
+  result.style.display =
+    "block";
+
+
+  if (data.status === "eligible") {
+
+    result.className =
+      "eligible";
+
+    result.innerHTML =
+      "<div class='big'>🟢 มีสิทธิ์รับอาหาร</div>" +
+
+      "<div class='employee'>" +
+      escapeHtml(data.employeeId) + "<br>" +
+      escapeHtml(data.name) + "<br>" +
+      escapeHtml(data.department) +
+      "</div>" +
+
+      "<button id='confirmButton' onclick='confirmMeal()'>" +
+      "✅ ยืนยันการรับอาหาร" +
+      "</button>" +
+
+      "<button onclick='scanNext()'>" +
+      "ยกเลิก / สแกนคนถัดไป" +
+      "</button>";
+
+
+  } else if (data.status === "used") {
+
+    result.className =
+      "used";
+
+    result.innerHTML =
+      "<div class='big'>🔴 ใช้สิทธิ์แล้ว</div>" +
+
+      "<div class='employee'>" +
+      escapeHtml(data.employeeId) + "<br>" +
+      escapeHtml(data.name) + "<br>" +
+      "รับสิทธิ์เมื่อ " +
+      escapeHtml(data.usedAt) +
+      "</div>" +
+
+      "<button onclick='scanNext()'>" +
+      "📷 สแกนคนถัดไป" +
+      "</button>";
+
+
+  } else if (data.status === "inactive") {
+
+    result.className =
+      "used";
+
+    result.innerHTML =
+      "<div class='big'>⛔ ไม่มีสิทธิ์</div>" +
+
+      "<div class='employee'>" +
+      escapeHtml(data.employeeId) + "<br>" +
+      escapeHtml(data.name) +
+      "</div>" +
+
+      "<button onclick='scanNext()'>" +
+      "📷 สแกนคนถัดไป" +
+      "</button>";
+
+
+  } else {
+
+    result.className =
+      "invalid";
+
+    result.innerHTML =
+      "<div class='big'>❓ ไม่พบข้อมูล</div>" +
+
+      escapeHtml(data.message || "") +
+
+      "<button onclick='scanNext()'>" +
+      "📷 สแกนคนถัดไป" +
+      "</button>";
+
+  }
+
+  document.getElementById("scannerStatus").innerHTML =
+    "";
+}
+
+
+/* =========================
+   CONFIRM
+========================= */
+
+function confirmMeal() {
+
+  const button =
+    document.getElementById("confirmButton");
+
+  if (button) {
+
+    button.disabled = true;
+    button.innerHTML =
+      "กำลังยืนยัน...";
+
+  }
+
+
+  const sessionToken =
+    localStorage.getItem(SESSION_KEY);
+
+
+  sendToApi("confirm", {
+
+    token: currentToken,
+    sessionToken: sessionToken
+
+  });
+}
+
+
+function handleConfirmResult(data) {
+
+  if (data.status === "unauthorized") {
+
+    localStorage.removeItem(SESSION_KEY);
+
+    currentToken = "";
+    processing = false;
+
+    showLogin();
+
+    document.getElementById("message").innerHTML =
+      "Session หมดอายุ กรุณาใส่ Staff PIN ใหม่";
+
+    return;
+  }
+
+
+  if (data.status === "success") {
+
+    const result =
+      document.getElementById("result");
+
+    result.className =
+      "success";
+
+    result.innerHTML =
+      "<div class='big'>✅ รับอาหารได้</div>" +
+
+      "<div class='employee'>" +
+      escapeHtml(data.employeeId) + "<br>" +
+      escapeHtml(data.name) + "<br>" +
+      escapeHtml(data.department) +
+      "</div>" +
+
+      "<button onclick='scanNext()'>" +
+      "📷 สแกนคนถัดไป" +
+      "</button>";
+
+  } else {
+
+    showResult(data);
+
+  }
+}
+
+
+/* =========================
+   คนถัดไป
+========================= */
+
+function scanNext() {
+
+  currentToken = "";
+  processing = false;
+
+  document.getElementById("result").style.display =
+    "none";
+
+  document.getElementById("scannerStatus").innerHTML =
+    "กำลังเปิดกล้อง...";
+
+  startScanner();
+}
+
+
+/* =========================
+   ปิดกล้อง
+========================= */
+
+function stopScanner(callback) {
+
+  if (
+    html5QrCode &&
+    scannerRunning
+  ) {
+
+    html5QrCode.stop()
+
+      .then(function() {
+
+        scannerRunning = false;
+
+        if (callback) {
+          callback();
+        }
+
+      })
+
+      .catch(function() {
+
+        scannerRunning = false;
+
+        if (callback) {
+          callback();
+        }
+
+      });
+
+  } else {
+
+    scannerRunning = false;
+
+    if (callback) {
+      callback();
+    }
+
+  }
+}
+
+
+/* =========================
+   ป้องกันข้อความ HTML
+========================= */
+
+function escapeHtml(value) {
+
+  return String(value ?? "")
+
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+</script>
 
 </body>
 </html>
