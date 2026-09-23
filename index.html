@@ -543,14 +543,37 @@ function checkEmployee() {
   const sessionToken =
     localStorage.getItem(SESSION_KEY);
 
-  sendToApi("check", {
+  const callbackName =
+    "mealCheck_" + Date.now();
 
-    token: currentToken,
-    sessionToken: sessionToken
+  window[callbackName] = function(data) {
 
-  });
+    delete window[callbackName];
+
+    const script =
+      document.getElementById("jsonpCheck");
+
+    if (script) {
+      script.remove();
+    }
+
+    handleCheckResult(data);
+  };
+
+  const script =
+    document.createElement("script");
+
+  script.id = "jsonpCheck";
+
+  script.src =
+    "https://script.google.com/macros/s/AKfycbzQ5cz48hmVvqn-gyrg7TVBwqm0oguBUJMZd0VEZqaE5k-B8akp4msS14sayxI9w1rg/exec" +
+    "?action=check" +
+    "&token=" + encodeURIComponent(currentToken) +
+    "&sessionToken=" + encodeURIComponent(sessionToken || "") +
+    "&callback=" + encodeURIComponent(callbackName);
+
+  document.body.appendChild(script);
 }
-
 
 function handleCheckResult(data) {
 
