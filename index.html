@@ -491,14 +491,16 @@ function startScanner() {
 
   html5QrCode.start(
 
-    { facingMode: "environment" },
+   {
+  facingMode: { exact: "environment" }
+},
 
     {
-      fps: 25,
+      fps: 15,
 
       qrbox: {
-        width: 320,
-        height: 320
+        width: 250,
+        height: 250
       }
     },
 
