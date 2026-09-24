@@ -774,16 +774,64 @@ function confirmMeal() {
 
   const sessionToken =
     localStorage.getItem(SESSION_KEY);
-
+  
+const requestId =
+  Date.now() + "_" +
+  Math.random().toString(36).substring(2);
 
   sendToApi("confirm", {
-
-    token: currentToken,
-    sessionToken: sessionToken
-
-  });
+  token: currentToken,
+  sessionToken: sessionToken,
+  requestId: requestId
+});
+  
+  setTimeout(function() {
+  checkConfirmStatus(requestId, 0);
+}, 1500);
+  
 }
+function checkConfirmStatus(requestId, attempt) {
 
+  const callbackName =
+    "confirmStatus_" + Date.now();
+
+  window[callbackName] = function(data) {
+
+    delete window[callbackName];
+
+    const script =
+      document.getElementById("confirmStatusScript");
+
+    if (script) {
+      script.remove();
+    }
+
+    if (data.pending === true && attempt < 5) {
+
+      setTimeout(function() {
+        checkConfirmStatus(requestId, attempt + 1);
+      }, 1000);
+
+    } else {
+
+      handleConfirmResult(data);
+
+    }
+  };
+
+  const script =
+    document.createElement("script");
+
+  script.id = "confirmStatusScript";
+
+  script.src =
+    "https://script.google.com/macros/s/AKfycbzQ5cz48hmVvqn-gyrg7TVBwqm0oguBUJMZd0VEZqaE5k-B8akp4msS14sayxI9w1rg/exec" +
+    "?action=confirmStatus" +
+    "&requestId=" + encodeURIComponent(requestId) +
+    "&callback=" + encodeURIComponent(callbackName);
+
+  document.body.appendChild(script);
+}
 
 function handleConfirmResult(data) {
 
