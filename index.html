@@ -205,6 +205,7 @@
   <input name="pin" id="apiPin">
   <input name="token" id="apiToken">
   <input name="sessionToken" id="apiSession">
+  <input name="requestId" id="apiRequestId">
 </form>
 
 
@@ -292,8 +293,11 @@ function sendToApi(action, values) {
   pendingAction = action;
 
   document.getElementById("apiAction").value =
-    action;
-
+    action
+    
+document.getElementById("apiRequestId").value =
+  values.requestId || "";
+  
   document.getElementById("apiPin").value =
     values.pin || "";
 
@@ -320,22 +324,74 @@ function loginStaff() {
     document.getElementById("message");
 
   if (!pin) {
-
-    message.innerHTML =
-      "กรุณาใส่ Staff PIN";
-
+    message.innerHTML = "กรุณาใส่ Staff PIN";
     return;
   }
 
-  message.innerHTML =
-    "กำลังตรวจสอบ...";
+  message.innerHTML = "กำลังตรวจสอบ...";
+
+  const requestId =
+    Date.now() + "_" +
+    Math.random().toString(36).substring(2);
 
   sendToApi("login", {
-    pin: pin
+    pin: pin,
+    requestId: requestId
   });
+
+  setTimeout(function() {
+    checkLoginStatus(requestId, 0);
+  }, 1500);
 }
+function checkLoginStatus(requestId, attempt) {
 
+  const callbackName =
+    "loginStatus_" + Date.now();
 
+  window[callbackName] = function(data) {
+
+    delete window[callbackName];
+
+    const script =
+      document.getElementById("loginStatusScript");
+
+    if (script) {
+      script.remove();
+    }
+
+    if (data.success === true && data.sessionToken) {
+
+      handleLoginResult(data);
+
+    } else if (data.pending === true && attempt < 5) {
+
+      setTimeout(function() {
+        checkLoginStatus(requestId, attempt + 1);
+      }, 1000);
+
+    } else {
+
+      const message =
+        document.getElementById("message");
+
+      message.innerHTML =
+        "❌ ไม่สามารถเข้าสู่ระบบได้ กรุณาลองใหม่";
+    }
+  };
+
+  const script =
+    document.createElement("script");
+
+  script.id = "loginStatusScript";
+
+  script.src =
+    "https://script.google.com/macros/s/AKfycbzQ5cz48hmVvqn-gyrg7TVBwqm0oguBUJMZd0VEZqaE5k-B8akp4msS14sayxI9w1rg/exec" +
+    "?action=loginStatus" +
+    "&requestId=" + encodeURIComponent(requestId) +
+    "&callback=" + encodeURIComponent(callbackName);
+
+  document.body.appendChild(script);
+}
 function handleLoginResult(data) {
 
   const message =
