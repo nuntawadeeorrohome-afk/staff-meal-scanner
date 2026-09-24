@@ -245,27 +245,30 @@ window.addEventListener("load", function() {
 
 window.addEventListener("message", function(event) {
 
+  // รับผลจาก callback.html ของ GitHub เท่านั้น
+  if (event.origin !== "https://nuntawadeeorrohome-afk.github.io") {
+    return;
+  }
+
+  const message = event.data;
+
   if (
-    event.origin !== "https://script.google.com" &&
-    event.origin !== "https://script.googleusercontent.com"
+    !message ||
+    typeof message !== "object" ||
+    message.source !== "staff-meal-callback"
   ) {
     return;
   }
 
-  const data = event.data;
+  const data = message.data;
 
   if (!data || typeof data !== "object") {
     return;
   }
 
-
   if (pendingAction === "login") {
 
     handleLoginResult(data);
-
-  } else if (pendingAction === "check") {
-
-    handleCheckResult(data);
 
   } else if (pendingAction === "confirm") {
 
