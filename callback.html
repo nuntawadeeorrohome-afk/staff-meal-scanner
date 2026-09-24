@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Staff Meal Callback</title>
+</head>
+<body>
+
+<script>
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const data = params.get("data");
+
+    if (data && window.parent) {
+      window.parent.postMessage(
+        {
+          source: "staff-meal-callback",
+          data: JSON.parse(decodeURIComponent(data))
+        },
+        window.location.origin
+      );
+    }
+  } catch (error) {
+    window.parent.postMessage(
+      {
+        source: "staff-meal-callback",
+        data: {
+          status: "error",
+          message: String(error)
+        }
+      },
+      window.location.origin
+    );
+  }
+</script>
+
+</body>
+</html>
